@@ -16,4 +16,14 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 
+# Mac specific
 .DS_Store
+
+# Play Framework specific
+tozny-demo/logs
+tozny-demo/project/project
+tozny-demo/project/target
+tozny-demo/target
+tozny-demo/tmp
+tozny-demo/dist
+tozny-demo/.cache
