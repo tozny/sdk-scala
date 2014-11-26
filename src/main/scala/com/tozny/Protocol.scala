@@ -11,7 +11,6 @@ import org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString
 import org.apache.commons.codec.binary.Hex
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.HttpClientBuilder
-import org.apache.http.protocol.HTTP
 import org.apache.http.{HttpResponse, NameValuePair}
 import org.apache.http.message.BasicNameValuePair
 
@@ -34,12 +33,20 @@ object Protocol {
     sig == signature  // TODO: timing insensitive comparison
   }
 
+  def sendRequest(
+    apiUrl: String, realmKeyId: String, secret: String, method: String,
+    params: Map[String, String]
+  ): HttpResponse = {
+    val payload = mkRequest(realmKeyId, secret, method, params)
+    rawCall(apiUrl, payload)
+  }
+
   // consider running in its own thread for UI responsiveness.
-  def rawCall(apiUrl: String, args: List[NameValuePair]): HttpResponse = {
+  def rawCall(apiUrl: String, args: Iterable[NameValuePair]): HttpResponse = {
     val client = HttpClientBuilder.create().build()
     val post = new HttpPost(apiUrl)
     post.setHeader("ACCEPT", "application/json")
-    post.setEntity(new UrlEncodedFormEntity(args, HTTP.UTF_8))
+    post.setEntity(new UrlEncodedFormEntity(asJavaIterable(args), utf8))
     client.execute(post)
   }
 
@@ -48,14 +55,14 @@ object Protocol {
     realmKeyId: String,
     secret: String,
     method: String,
-    params: List[NameValuePair]
-  ): List[NameValuePair] = {
-    List(
+    params: Map[String, String]
+  ): Iterable[NameValuePair] = {
+    (params ++ Map(
       "nonce" ->  getNonce,
       "expires_at" ->  getExpires,
       "realm_key_id" -> realmKeyId,
       "method" ->  method
-    ).map { case (k,v) ⇒
+    )).toSeq.map { case (k,v) ⇒
       new BasicNameValuePair(k, v)
     }
   }

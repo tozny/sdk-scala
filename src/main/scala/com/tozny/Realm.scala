@@ -10,4 +10,6 @@ class Realm(
   val inApiUrl: String = sys.env("API_URL")
 ) {
 
+  /* private val rawCall = Protocol.rawCall(realmSecret) */
+
 }
