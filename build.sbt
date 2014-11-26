@@ -20,6 +20,7 @@ lazy val demo = (project in file("tozny-demo")).
     version      := "1.0",
     scalaVersion := "2.11.4"
   ).
+  aggregate(root).
   dependsOn(root).
   enablePlugins(PlayScala)
 
