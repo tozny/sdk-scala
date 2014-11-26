@@ -2,13 +2,10 @@ package com.tozny
 
 import java.util.Date
 
-import org.apache.commons.codec.binary.Base64.decodeBase64
 
 import play.api.libs.json.Json.toJson
 import play.api.libs.json.{JsObject, JsValue, Reads, Writes}
 
-import scala.concurrent.{Await, Future, ExecutionContext}
-import scala.concurrent.duration._
 
 class Realm(
   val realmKeyId: String,
@@ -76,7 +73,7 @@ class Realm(
     )))
     for {
       r    <- resp.right
-      user <- reads.reads((r \ "results")).asOpt.toRight("error parsing response").right
+      user <- reads.reads(r \ "results").asOpt.toRight("error parsing response").right
     } yield user
   }
 
