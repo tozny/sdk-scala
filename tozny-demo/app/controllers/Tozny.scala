@@ -25,13 +25,22 @@ object Tozny extends Controller with DefaultReads {
       },
       valid_attempt => {
         // TODO
-        val realm = new com.tozny.Realm("sid_54738a875dd7b", "", "https://api.tozny.com/index.php")
+        val realm = new com.tozny.Realm(
+          "sid_54738a875dd7b",
+          "dc3d1f7c855a570ec24aa768fe4f02f00eda0b3387adace9462b10639448e684",
+          "https://api.tozny.com/index.php"
+        )
 
         realm.verifyLogin[JsValue](valid_attempt.tozny_signed_data, valid_attempt.tozny_signature) match {
           case Left(error) =>
             BadRequest(views.html.index("Invalid signature", "Error with your signature:  "+error, ""))
-          case Right(json_response:JsValue) =>
-            Ok("ok, I recived POST data. That's all...: "+json_response.toString());
+          case Right(verify_response:JsValue) =>
+            realm.userGet[JsValue]((verify_response \ "user_id").toString) match {
+              case Left(error) =>
+                BadRequest(views.html.index("Invalid user record", "Error with your user record:  "+error, ""))
+              case Right(user_response:JsValue) =>
+                Ok("ok, I received POST data. That's all...: "+user_response.toString());
+            }
         }
       }
     )
