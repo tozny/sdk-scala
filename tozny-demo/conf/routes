@@ -1,5 +1,6 @@
 # Home page
 GET		/					controllers.Application.index
+POST    /					controllers.Application.login
 
 # Static content hosted beneath the /public directory
 GET		/assets/*file		controllers.Assets.at(path="/public", file)

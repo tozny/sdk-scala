@@ -1,7 +1,11 @@
 package controllers
 
+import org.apache.commons.codec.binary.Base64
 import play.api._
+import play.api.libs.json.Json
 import play.api.mvc._
+import play.api.data._
+import play.api.data.Forms._
 
 object Application extends Controller {
 
@@ -14,5 +18,6 @@ object Application extends Controller {
       )
     )
   }
+
 
 }

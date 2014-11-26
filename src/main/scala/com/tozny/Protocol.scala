@@ -8,9 +8,8 @@ import java.util.Date
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 
-import org.apache.commons.codec.binary.Base64.{
-  decodeBase64, encodeBase64URLSafeString
-}
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.binary.Hex
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.HttpClientBuilder
@@ -31,7 +30,7 @@ object Protocol {
     val mac = Mac.getInstance("HmacSHA256")
     mac.init(secretKey)
     val result: Array[Byte] = mac.doFinal(message.getBytes(utf8))
-    encodeBase64URLSafeString(result)
+    Base64.encodeBase64URLSafeString(result)
   }
 
   def checkSignature(secret: String, signature: String, message: String): Boolean = {
@@ -77,7 +76,7 @@ object Protocol {
     ))
     val payload = params ++ meta
     val json = Json.stringify(payload)
-    val encoded = encodeBase64URLSafeString(json.getBytes(utf8))
+    val encoded = Base64.encodeBase64URLSafeString(json.getBytes(utf8))
     val signature = sign(secret, encoded)
     return List(
       new BasicNameValuePair("signed_data", encoded),
@@ -86,7 +85,7 @@ object Protocol {
   }
 
   def decode[A](payload: String)(implicit r: Reads[A]): Option[A] = {
-    val decoded = decodeBase64(payload)
+    val decoded = new Base64(true).decode(payload)
     Json.parse(new String(decoded, utf8)).asOpt
   }
 

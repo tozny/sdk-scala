@@ -1,5 +1,6 @@
 lazy val root = (project in file(".")).
   settings(
+    organization := "com.tozny",
     name         := "sdk-scala",
     version      := "1.0",
     scalaVersion := "2.11.4",
