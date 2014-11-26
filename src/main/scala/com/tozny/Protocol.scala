@@ -1,19 +1,19 @@
 package com.tozny
 
-import java.net.URI
+import scala.collection.JavaConversions._
 import java.nio.charset.Charset
 import java.security.SecureRandom
 
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 
-import org.apache.commons.codec.binary.Base64.{decodeBase64, encodeBase64URLSafeString}
-import org.apache.commons.codec.binary.Hex.{encodeHexString}
-import org.apache.http.NameValuePair
-import org.apache.http.message.BasicNameValuePair
-import org.apache.http.impl.client.{
-  ClientProtocolException, HttpClient, HttpClientBuilder, HttpResponse
-}
+import org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString
+import org.apache.commons.codec.binary.Hex
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.protocol.HTTP
+import org.apache.http.{HttpResponse, NameValuePair}
+
 import org.apache.http.client.entity.UrlEncodedFormEntity
 
 object Protocol {
@@ -21,9 +21,9 @@ object Protocol {
   private val RANDOM_ALGORITHM = "SHA1PRNG"
 
   def sign(secret: String, message: String): String = {
-    val secret = new SecretKeySpec(secret.getBytes(utf8), "HmacSHA256")
+    val secretKey = new SecretKeySpec(secret.getBytes(utf8), "HmacSHA256")
     val mac = Mac.getInstance("HmacSHA256")
-    mac.init(secret)
+    mac.init(secretKey)
     val result: Array[Byte] = mac.doFinal(message.getBytes(utf8))
     encodeBase64URLSafeString(result)
   }
@@ -54,6 +54,11 @@ object Protocol {
       ("realm_key_id", realmKeyId),
       ("method",       method)
     )
+    ???
+  }
+
+  private def getExpires(): String = {
+    ???
   }
 
   private def getNonce(): String = {
@@ -64,7 +69,7 @@ object Protocol {
   private def getRandomBytes(numberOfBytes: Int): Array[Byte] = {
     val bytes: Array[Byte] = new Array(numberOfBytes)
     val random = SecureRandom.getInstance(RANDOM_ALGORITHM)
-    r.nextBytes(bytes)
+    random.nextBytes(bytes)
     bytes
   }
 }

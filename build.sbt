@@ -8,3 +8,5 @@ lazy val root = (project in file(".")).
 	  "org.apache.httpcomponents" % "httpclient"    % "4.3.+"
 	)
   )
+
+net.virtualvoid.sbt.graph.Plugin.graphSettings
