@@ -28,7 +28,7 @@ object Protocol {
     encodeBase64URLSafeString(result)
   }
 
-  def verify(secret: String, signature: String, message: String): Boolean = {
+  def checkSignature(secret: String, signature: String, message: String): Boolean = {
     val sig = sign(secret, message)
     sig == signature  // TODO: timing insensitive comparison
   }
@@ -42,19 +42,24 @@ object Protocol {
     client.execute(post)
   }
 
+  //rawCall("https://api.tozny.com/index.php",args)
   def mkRequest(
     realmKeyId: String,
     secret: String,
     method: String,
     params: List[NameValuePair]
   ): List[NameValuePair] = {
-    var req = Array(
-      ("nonce",        getNonce),
-      ("expires_at",   getExpires),
-      ("realm_key_id", realmKeyId),
-      ("method",       method)
-    )
-    ???
+    List(
+      "nonce" ->  getNonce,
+      "expires_at" ->  getExpires,
+      "realm_key_id" -> realmKeyId,
+      "method" ->  method
+    ).map { case (k,v) ⇒
+      new NameValuePair {
+        override def getName: String = k
+        override def getValue: String = v
+      }
+    }
   }
 
   private def getExpires(): String = {
