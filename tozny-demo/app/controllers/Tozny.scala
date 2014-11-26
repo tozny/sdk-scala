@@ -11,8 +11,8 @@ import com.tozny.Realm
 object Tozny extends Controller {
 
   val realm = new Realm(
-    Play.current.configuration.getString("tozny.realmId").get,
-    Play.current.configuration.getString("tozny.realmKey").get,
+    Play.current.configuration.getString("tozny.realmKeyId").get,
+    Play.current.configuration.getString("tozny.realmKeySecret").get,
     Play.current.configuration.getString("tozny.apiUrl").get
   )
 
