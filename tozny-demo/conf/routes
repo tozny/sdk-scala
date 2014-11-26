@@ -4,3 +4,4 @@ GET		/					controllers.Application.index
 # Static content hosted beneath the /public directory
 GET		/assets/*file		controllers.Assets.at(path="/public", file)
 
+POST	/tozny				controllers.Tozny.verify

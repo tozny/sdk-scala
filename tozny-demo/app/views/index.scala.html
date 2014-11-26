@@ -1,4 +1,4 @@
-@(title: String, rawHtml: String)
+@(title: String, demoText: String, toznyRealmId: String)
 
 <!DOCTYPE html>
 
@@ -6,10 +6,29 @@
     <head>
         <title>@title</title>
         <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+        <link href="https://s3-us-west-2.amazonaws.com/tozny/production/interface/javascript/v2/tozny.css" rel="stylesheet" type="text/css" />
         <script src="@routes.Assets.at("javascripts/main.js")" type="text/javascript"></script>
     </head>
     <body>
-        @Html(rawHtml)
+        <h1>@demoText</h1>
+
+        <div id="tozny"></div>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.js"></script>
+		<script src="https://s3-us-west-2.amazonaws.com/tozny/production/interface/javascript/v2/jquery.tozny.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$('#tozny').tozny({
+					"type": "login",
+					"style": "button",
+					"theme": "light",
+					"button_theme": "light",
+					"realm_key_id": "@toznyRealmId",
+					"api_url": "https://api.tozny.com/index.php",
+					"form_action": "@routes.Tozny.verify"  // relative URL to POST endpoint
+				});
+			});
+		</script>
+
     </body>
 </html>
 

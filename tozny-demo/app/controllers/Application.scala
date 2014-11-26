@@ -7,7 +7,11 @@ object Application extends Controller {
 
   def index = Action {
     Ok(
-      views.html.index("Tozny Title", "<h1>This is Tozny</h1>")
+      views.html.index(
+        "Tozny Title", 
+        "This is a Tozny example site", 
+        Play.current.configuration.getString("tozny.realmId").get
+      )
     )
   }
 
