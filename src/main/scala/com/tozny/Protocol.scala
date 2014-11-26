@@ -19,7 +19,8 @@ import org.apache.http.message.BasicNameValuePair
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.util.EntityUtils
 
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{Json, JsObject, JsValue, Reads, Writes}
+import play.api.libs.json.Json.{toJson}
 
 object Protocol {
   private val utf8 = Charset.forName("UTF-8")
@@ -40,7 +41,7 @@ object Protocol {
 
   def sendRequest(
     apiUrl: String, realmKeyId: String, secret: String, method: String,
-    params: Map[String, String]
+    params: JsObject
   ): Either[String, JsValue] = {
     val payload = mkRequest(realmKeyId, secret, method, params)
     val resp = rawCall(apiUrl, payload)
@@ -66,15 +67,16 @@ object Protocol {
     realmKeyId: String,
     secret: String,
     method: String,
-    params: Map[String, String]
+    params: JsObject
   ): Iterable[NameValuePair] = {
-    val payload = params ++ Map(
-      "nonce" ->  getNonce,
-      "expires_at" ->  getExpires,
-      "realm_key_id" -> realmKeyId,
-      "method" ->  method
-    )
-    val json = Json.stringify(Json.toJson(payload))
+    val meta = new JsObject(Seq(
+      "nonce" ->  toJson(getNonce),
+      "expires_at" ->  toJson(getExpires),
+      "realm_key_id" -> toJson(realmKeyId),
+      "method" ->  toJson(method)
+    ))
+    val payload = params ++ meta
+    val json = Json.stringify(payload)
     val encoded = encodeBase64URLSafeString(json.getBytes(utf8))
     val signature = sign(secret, encoded)
     return List(
@@ -83,9 +85,9 @@ object Protocol {
     )
   }
 
-  def decode(payload: String): JsValue = {
+  def decode[A](payload: String)(implicit r: Reads[A]): Option[A] = {
     val decoded = decodeBase64(payload)
-    Json.parse(new String(decoded, utf8))
+    Json.parse(new String(decoded, utf8)).asOpt
   }
 
   def encodeTime(date: Date): String = {
