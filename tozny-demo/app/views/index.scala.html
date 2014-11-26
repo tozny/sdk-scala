@@ -1,4 +1,4 @@
-@(title: String, demoText: String, toznyRealmId: String)
+@(title: String, demoText: String, toznyRealmId: String, toznyApiUrl: String)
 
 <!DOCTYPE html>
 
@@ -23,8 +23,8 @@
 					"theme": "light",
 					"button_theme": "light",
 					"realm_key_id": "@toznyRealmId",
-					"api_url": "https://api.tozny.com/index.php",
-					"form_action": "@routes.Tozny.verify"  // relative URL to POST endpoint
+					"api_url": "@toznyApiUrl",
+					"form_action": "@routes.Tozny.verify"  // relative URL to POST endpoint in this application
 				});
 			});
 		</script>
