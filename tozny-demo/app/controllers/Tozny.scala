@@ -25,7 +25,7 @@ object Tozny extends Controller with DefaultReads {
       },
       valid_attempt => {
         // TODO
-        val realm = new com.tozny.Realm("sid_54738a875dd7b", "dc3d1f7c855a570ec24aa768fe4f02f00eda0b3387adace9462b10639448e684", "https://api.tozny.com/index.php")
+        val realm = new com.tozny.Realm("sid_54738a875dd7b", "", "https://api.tozny.com/index.php")
 
         realm.verifyLogin[JsValue](valid_attempt.tozny_signed_data, valid_attempt.tozny_signature) match {
           case Left(error) =>
