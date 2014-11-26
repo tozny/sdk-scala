@@ -70,4 +70,14 @@ class Realm(
     } yield result
   }
 
+  def userGet[A](userId: String)(implicit reads: Reads[A]): Either[String, A] = {
+    val resp = rawCall("realm.user_get", new JsObject(Seq(
+      "user_id" -> toJson(userId)
+    )))
+    for {
+      r    <- resp.right
+      user <- reads.reads((r \ "results")).asOpt.toRight("error parsing response").right
+    } yield user
+  }
+
 }
