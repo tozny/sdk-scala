@@ -63,7 +63,7 @@ object Protocol {
   }
 
   private def getExpires(): String = {
-    ???
+    Math.floor((System.currentTimeMillis() + (5 * 60 * 1000)) / 1000).toString
   }
 
   private def getNonce(): String = {
