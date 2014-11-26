@@ -7,14 +7,17 @@ import java.security.SecureRandom
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 
-import org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString
+import org.apache.commons.codec.binary.Base64.{
+  decodeBase64, encodeBase64URLSafeString
+}
 import org.apache.commons.codec.binary.Hex
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.{HttpResponse, NameValuePair}
 import org.apache.http.message.BasicNameValuePair
-
 import org.apache.http.client.entity.UrlEncodedFormEntity
+
+import play.api.libs.json.{Json, JsValue}
 
 object Protocol {
   private val utf8 = Charset.forName("UTF-8")
@@ -57,14 +60,24 @@ object Protocol {
     method: String,
     params: Map[String, String]
   ): Iterable[NameValuePair] = {
-    (params ++ Map(
+    val payload = params ++ Map(
       "nonce" ->  getNonce,
       "expires_at" ->  getExpires,
       "realm_key_id" -> realmKeyId,
       "method" ->  method
-    )).toSeq.map { case (k,v) ⇒
-      new BasicNameValuePair(k, v)
-    }
+    )
+    val json = Json.stringify(Json.toJson(payload))
+    val encoded = encodeBase64URLSafeString(json.getBytes(utf8))
+    val signature = sign(secret, encoded)
+    return List(
+      new BasicNameValuePair("signed_data", encoded),
+      new BasicNameValuePair("signature", signature)
+    )
+  }
+
+  def decode(payload: String): JsValue = {
+    val decoded = decodeBase64(payload)
+    Json.parse(new String(decoded, utf8))
   }
 
   private def getExpires(): String = {
