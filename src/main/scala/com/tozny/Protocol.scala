@@ -13,6 +13,7 @@ import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.protocol.HTTP
 import org.apache.http.{HttpResponse, NameValuePair}
+import org.apache.http.message.BasicNameValuePair
 
 import org.apache.http.client.entity.UrlEncodedFormEntity
 
@@ -55,10 +56,7 @@ object Protocol {
       "realm_key_id" -> realmKeyId,
       "method" ->  method
     ).map { case (k,v) ⇒
-      new NameValuePair {
-        override def getName: String = k
-        override def getValue: String = v
-      }
+      new BasicNameValuePair(k, v)
     }
   }
 
