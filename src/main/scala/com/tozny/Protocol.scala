@@ -3,6 +3,7 @@ package com.tozny
 import scala.collection.JavaConversions._
 import java.nio.charset.Charset
 import java.security.SecureRandom
+import java.util.Date
 
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
@@ -16,6 +17,7 @@ import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.{HttpResponse, NameValuePair}
 import org.apache.http.message.BasicNameValuePair
 import org.apache.http.client.entity.UrlEncodedFormEntity
+import org.apache.http.util.EntityUtils
 
 import play.api.libs.json.{Json, JsValue}
 
@@ -39,9 +41,15 @@ object Protocol {
   def sendRequest(
     apiUrl: String, realmKeyId: String, secret: String, method: String,
     params: Map[String, String]
-  ): HttpResponse = {
+  ): Either[String, JsValue] = {
     val payload = mkRequest(realmKeyId, secret, method, params)
-    rawCall(apiUrl, payload)
+    val resp = rawCall(apiUrl, payload)
+    if (resp.getStatusLine.getStatusCode >= 300) {
+      Left(resp.getStatusLine.getReasonPhrase)
+    }
+    else {
+      Right(Json.parse(EntityUtils.toString(resp.getEntity)))
+    }
   }
 
   // consider running in its own thread for UI responsiveness.
@@ -78,6 +86,11 @@ object Protocol {
   def decode(payload: String): JsValue = {
     val decoded = decodeBase64(payload)
     Json.parse(new String(decoded, utf8))
+  }
+
+  def encodeTime(date: Date): String = {
+    val inSeconds = Math.floor(date.getTime() / 1000)
+    return inSeconds.toString
   }
 
   private def getExpires(): String = {
