@@ -7,7 +7,7 @@ import play.api.data._
 import play.api.data.Forms._
 import com.tozny.{Login, Realm}
 
-object Tozny extends Controller {
+object Tozny extends Controller with AppSecurity {
   val realm = new Realm(
     Play.current.configuration.getString("tozny.realmKeyId").get,
     Play.current.configuration.getString("tozny.realmKeySecret").get,
@@ -30,11 +30,20 @@ object Tozny extends Controller {
       validForm => {
         val loginAttempt = realm.verifyLogin(validForm.data, validForm.signature)
         loginAttempt match {
-          case Right(login) => Ok(login.toString)
+          case Right(login) => Ok(login.toString).withSession(
+            request.session +
+            ("tozny.user_id" -> login.userId) +
+            ("tozny.display_name" -> login.userDisplay)
+          )
           case Left(errors) => BadRequest(errors.toString)  // TODO: proper response code
         }
       }
     )
+  }
+
+  def protectedResource = Authenticated { implicit request =>
+    val toznyUser = request.user
+    Ok("You are logged in as " + toznyUser.displayName)
   }
 
 }

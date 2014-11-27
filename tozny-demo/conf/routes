@@ -5,3 +5,4 @@ GET		/					controllers.Application.index
 GET		/assets/*file		controllers.Assets.at(path="/public", file)
 
 POST	/tozny				controllers.Tozny.verify
+GET     /protected          controllers.Tozny.protectedResource
