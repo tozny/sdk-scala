@@ -6,7 +6,7 @@ import org.apache.commons.codec.binary.Base64.decodeBase64
 
 import play.api.data.validation.ValidationError
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{JsObject, JsValue, Reads, Writes}
+import play.api.libs.json.{JsObject, JsValue, JsPath, Reads, Writes}
 
 import scala.concurrent.{Await, Future, ExecutionContext}
 import scala.concurrent.duration._
@@ -71,14 +71,24 @@ class Realm(
     } yield result
   }
 
-  def userGet[A](userId: String)(implicit reads: Reads[A]): Either[String, A] = {
+  def userGet(userId: String): Either[Seq[ValidationError], ToznyUser] = {
     val resp = rawCall("realm.user_get", new JsObject(Seq(
       "user_id" -> toJson(userId)
     )))
     for {
-      r    <- resp.right
-      user <- reads.reads((r \ "results")).asOpt.toRight("error parsing response").right
+      r    <- resp.left.map(err).right
+      user <- ToznyUser.ToznyUserFormat.reads(r \ "results").asEither.left.map(flatErrors).right
     } yield user
+
+      /* Left(Seq(new ValidationError("invalid signature"))) */
+  }
+
+  private def err(e: String): Seq[ValidationError] = {
+    Seq(ValidationError(e))
+  }
+
+  private def flatErrors(es: Seq[(JsPath, Seq[ValidationError])]): Seq[ValidationError] = {
+    es flatMap { case (p, vs) => vs }
   }
 
 }

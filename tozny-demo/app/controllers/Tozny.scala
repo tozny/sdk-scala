@@ -5,7 +5,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.data._
 import play.api.data.Forms._
-import com.tozny.{Login, Realm}
+import com.tozny.{Login, Realm, ToznyUser, ToznyMeta}
 
 object Tozny extends Controller with AppSecurity {
   val realm = new Realm(
@@ -20,8 +20,15 @@ object Tozny extends Controller with AppSecurity {
   }
 
   def protectedResource = Authenticated { implicit request =>
-    val toznyUser = request.user
-    Ok("You are logged in as " + toznyUser.userDisplay)
+    val toznyLogin = request.user
+    val user = realm.userGet(toznyLogin.userId)
+    user match {
+      case Right(u) => {
+        val userData = Json.prettyPrint(Json.toJson(u))
+        Ok("You are logged in as " + u.meta.displayname + "\n\n" + userData)
+      }
+      case Left(e) => BadRequest(e.toString)
+    }
   }
 
 }
