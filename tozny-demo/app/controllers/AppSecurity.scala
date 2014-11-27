@@ -48,6 +48,16 @@ trait AppSecurity extends Controller {
     }
   }
 
+  object LogoutAction extends ActionBuilder[Request] {
+    def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]) = {
+      block(request).map { result =>
+        result withSession {
+          request.session - "tozny_user"
+        }
+      }(executionContext)
+    }
+  }
+
   def getUserFromRequest(req: RequestHeader): Option[Login] = {
     for {
       json <- req.session.get("tozny_user")
