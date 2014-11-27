@@ -30,7 +30,7 @@ object Tozny extends Controller with AppSecurity {
       validForm => {
         val loginAttempt = realm.verifyLogin(validForm.data, validForm.signature)
         loginAttempt match {
-          case Right(login) => Ok(login.toString).withSession(
+          case Right(login) => Redirect("/protected").withSession(
             request.session +
             ("tozny.user_id" -> login.userId) +
             ("tozny.display_name" -> login.userDisplay)
