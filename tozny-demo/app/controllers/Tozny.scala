@@ -14,36 +14,14 @@ object Tozny extends Controller with AppSecurity {
     Play.current.configuration.getString("tozny.apiUrl").get
   )
 
-  case class ToznyLoginAttempt(data: String, signature: String)
-
-  val toznyForm = Form(
-    mapping(
-      "tozny_signed_data" -> nonEmptyText,
-      "tozny_signature" -> nonEmptyText
-    )(ToznyLoginAttempt.apply)(ToznyLoginAttempt.unapply)
-  )
-
-
-  def verify = Action { implicit request =>
-    toznyForm.bindFromRequest.fold(
-      invalidForm => BadRequest(invalidForm.toString),
-      validForm => {
-        val loginAttempt = realm.verifyLogin(validForm.data, validForm.signature)
-        loginAttempt match {
-          case Right(login) => Redirect("/protected").withSession(
-            request.session +
-            ("tozny.user_id" -> login.userId) +
-            ("tozny.display_name" -> login.userDisplay)
-          )
-          case Left(errors) => BadRequest(errors.toString)  // TODO: proper response code
-        }
-      }
-    )
+  def verify = LoginAction { implicit request =>
+    // Access login information here via `request.user`
+    Redirect("/protected")
   }
 
   def protectedResource = Authenticated { implicit request =>
     val toznyUser = request.user
-    Ok("You are logged in as " + toznyUser.displayName)
+    Ok("You are logged in as " + toznyUser.userDisplay)
   }
 
 }

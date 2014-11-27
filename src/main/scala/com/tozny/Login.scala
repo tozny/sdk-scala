@@ -2,6 +2,7 @@ package com.tozny
 
 import java.util.Date
 import play.api.libs.json._
+import play.api.libs.json.Json.toJson
 
 case class Login(
   userId:        String,
@@ -14,7 +15,8 @@ case class Login(
 
 object Login {
 
-  implicit object LoginReads extends Reads[Login] {
+  implicit object LoginFormat extends Format[Login] {
+
     def reads(json: JsValue): JsResult[Login] = {
       val attempt = for {
         userId        <- (json \ "user_id")       .asOpt[String].toRight("expected user_id").right
@@ -32,6 +34,19 @@ object Login {
         case Left(e)      => JsError(e)
       }
     }
+
+    def writes(l: Login): JsValue = {
+      val expires = Math.floor(l.expiresAt.getTime / 1000)
+      new JsObject(Seq(
+        ("user_id"        -> toJson(l.userId)),
+        ("session_id"     -> toJson(l.sessionId)),
+        ("realm_key_id"   -> toJson(l.realmKeyId)),
+        ("user_display"   -> toJson(l.userDisplay)),
+        ("expires_at"     -> toJson(expires)),
+        ("signature_type" -> toJson(l.signatureType))
+      ))
+    }
+
   }
 
 }
