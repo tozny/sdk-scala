@@ -5,11 +5,9 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.data._
 import play.api.data.Forms._
-import com.tozny.Realm
-
+import com.tozny.{Login, Realm}
 
 object Tozny extends Controller {
-
   val realm = new Realm(
     Play.current.configuration.getString("tozny.realmKeyId").get,
     Play.current.configuration.getString("tozny.realmKeySecret").get,
@@ -30,12 +28,13 @@ object Tozny extends Controller {
     toznyForm.bindFromRequest.fold(
       invalidForm => BadRequest(invalidForm.toString),
       validForm => {
-        val verificationResult = realm.verifyLogin[JsValue](validForm.data, validForm.signature)
-        verificationResult match {
-          case Right(json) => Ok(json)
-          case x => BadRequest(x.toString)  // TODO: proper response code
+        val loginAttempt = realm.verifyLogin(validForm.data, validForm.signature)
+        loginAttempt match {
+          case Right(login) => Ok(login.toString)
+          case Left(errors) => BadRequest(errors.toString)  // TODO: proper response code
         }
       }
     )
   }
+
 }

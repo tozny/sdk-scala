@@ -4,6 +4,7 @@ import java.util.Date
 
 import org.apache.commons.codec.binary.Base64.decodeBase64
 
+import play.api.data.validation.ValidationError
 import play.api.libs.json.Json.toJson
 import play.api.libs.json.{JsObject, JsValue, Reads, Writes}
 
@@ -23,14 +24,14 @@ class Realm(
   /**
    * We have received a signed package and signature - let's verify it.
    */
-  def verifyLogin[A](signedData: String, signature: String)(
-    implicit r: Reads[A]
-  ): Either[String, A] = {
+  def verifyLogin(signedData: String, signature: String): Either[Seq[ValidationError], Login] = {
     if (Protocol.checkSignature(realmSecret, signature, signedData)) {
-      Protocol.decode(signedData).toRight("error parsing response")
+      Protocol.decode[Login](signedData).left.map { errors =>
+        errors flatMap { case (path, validationErrors) => validationErrors }
+      }
     }
     else {
-      Left("invalid signature")
+      Left(Seq(new ValidationError("invalid signature")))
     }
   }
 

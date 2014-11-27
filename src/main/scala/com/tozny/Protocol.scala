@@ -19,8 +19,9 @@ import org.apache.http.message.BasicNameValuePair
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.util.EntityUtils
 
-import play.api.libs.json.{Json, JsObject, JsValue, Reads, Writes}
-import play.api.libs.json.Json.{toJson}
+import play.api.data.validation.ValidationError
+import play.api.libs.json.{Json, JsObject, JsValue, JsPath, Reads, Writes}
+import play.api.libs.json.Json.{fromJson, toJson}
 
 object Protocol {
   private val utf8 = Charset.forName("UTF-8")
@@ -85,9 +86,10 @@ object Protocol {
     )
   }
 
-  def decode[A](payload: String)(implicit r: Reads[A]): Option[A] = {
+  def decode[A](payload: String)(implicit r: Reads[A]): Either[Seq[(JsPath, Seq[ValidationError])], A] = {
     val decoded = decodeBase64(payload)
-    Json.parse(new String(decoded, utf8)).asOpt
+    val parsed  = Json.parse(new String(decoded, utf8))
+    fromJson(parsed).asEither
   }
 
   def encodeTime(date: Date): String = {
