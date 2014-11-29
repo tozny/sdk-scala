@@ -16,47 +16,15 @@ case class ToznyUser(
   totalFailedLogins: Int,
   lastFailedLogin:   Option[Date],
   totalDevices:      Int,
-  meta:              ToznyMeta
+  meta:              ToznyUser.ToznyMeta
 )
 
-case class ToznyMeta(
-  username:          String,
-  email:             String,
-  displayname:       String
-)
-
-object ToznyMeta {
-
-  implicit object ToznyMetaFormat extends Format[ToznyMeta] {
-
-    def reads(json: JsValue): JsResult[ToznyMeta] = {
-      val meta = for {
-        username    <- (json \ "username")   .asOpt[String].toRight("expected username").right
-        email       <- (json \ "email")      .asOpt[String].toRight("expected email").right
-        displayname <- (json \ "displayname").asOpt[String].toRight("expected displayname").right
-      } yield ToznyMeta(username, email, displayname)
-      meta match {
-        case Right(m) => new JsSuccess(m)
-        case Left(e)  => JsError(e)
-      }
-    }
-
-    def writes(m: ToznyMeta): JsValue = {
-      new JsObject(Seq(
-        "username"    -> toJson(m.username),
-        "email"       -> toJson(m.email),
-        "displayname" -> toJson(m.displayname)
-      ))
-    }
-
-  }
-
-}
 
 object ToznyUser {
 
+  type ToznyMeta = Map[String, String]
+
   implicit object ToznyUserFormat extends Format[ToznyUser] {
-    import ToznyMeta.ToznyMetaFormat
 
     def reads(json: JsValue): JsResult[ToznyUser] = {
       val user = for {

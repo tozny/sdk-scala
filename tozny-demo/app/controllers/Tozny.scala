@@ -5,7 +5,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.data._
 import play.api.data.Forms._
-import com.tozny.{Login, Realm, ToznyUser, ToznyMeta}
+import com.tozny.{Login, Realm, ToznyUser}
 
 object Tozny extends Controller with AppSecurity {
   val realm = new Realm(
@@ -25,7 +25,7 @@ object Tozny extends Controller with AppSecurity {
     user match {
       case Right(u) => Ok(views.html.protectedResource(
         "Protected Resource",
-        u.meta.displayname,
+        u.meta.get("displayname").getOrElse(toznyLogin.userDisplay),
         Json.prettyPrint(Json.toJson(u))
       ))
       case Left(e) => BadRequest(e.toString)
