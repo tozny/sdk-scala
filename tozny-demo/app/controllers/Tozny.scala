@@ -7,6 +7,8 @@ import play.api.data._
 import play.api.data.Forms._
 import com.tozny.{Login, Realm, ToznyUser}
 
+import scala.util.{Failure, Success, Try}
+
 object Tozny extends Controller with AppSecurity {
   val realm = new Realm(
     Play.current.configuration.getString("tozny.realmKeyId").get,
@@ -23,12 +25,12 @@ object Tozny extends Controller with AppSecurity {
     val toznyLogin = request.user
     val user = realm.userGet(toznyLogin.userId)
     user match {
-      case Right(u) => Ok(views.html.protectedResource(
+      case Success(u) => Ok(views.html.protectedResource(
         "Protected Resource",
         u.meta.get("displayname").getOrElse(toznyLogin.userDisplay),
         Json.prettyPrint(Json.toJson(u))
       ))
-      case Left(e) => BadRequest(e.toString)
+      case Failure(e) => BadRequest(e.getMessage)
     }
   }
 

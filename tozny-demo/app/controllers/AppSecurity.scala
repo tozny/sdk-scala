@@ -10,6 +10,7 @@ import play.api.data.Forms._
 import com.tozny.{Login, Realm}
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 trait AppSecurity extends Controller {
 
@@ -33,14 +34,14 @@ trait AppSecurity extends Controller {
         validForm => {
           val loginAttempt = realm.verifyLogin(validForm.data, validForm.signature)
           loginAttempt match {
-            case Right(login) => {
+            case Success(login) => {
               val req = new AuthenticatedRequest(login, request)
               block(req).map { result =>
                 val json = Json.stringify(toJson(login))
                 result.withSession { request.session + ("tozny_user" -> json) }
               }(executionContext)
             }
-            case Left(errors) => Future.successful(loginFailure(errors.toString))
+            case Failure(errors) => Future.successful(loginFailure(errors.getMessage))
           }
         }
       )

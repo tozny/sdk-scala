@@ -4,18 +4,19 @@ import java.util.Date
 
 import org.apache.commons.codec.binary.Base64.decodeBase64
 
-import play.api.data.validation.ValidationError
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{JsObject, JsValue, JsPath, Reads, Writes}
+import play.api.libs.json.{JsObject, JsValue, Reads, Writes}
 
 import scala.concurrent.{Await, Future, ExecutionContext}
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 class Realm(
   val realmKeyId: String,
   val realmSecret: String,
   val apiUrl: String = sys.env("API_URL")
 ) {
+  import Protocol.asTry
 
   val rawCall = Protocol.sendRequest(
     apiUrl, realmKeyId, realmSecret, _: String, _: JsObject
@@ -24,27 +25,25 @@ class Realm(
   /**
    * We have received a signed package and signature - let's verify it.
    */
-  def verifyLogin(signedData: String, signature: String): Either[Seq[ValidationError], Login] = {
+  def verifyLogin(signedData: String, signature: String): Try[Login] = {
     if (Protocol.checkSignature(realmSecret, signature, signedData)) {
-      Protocol.decode[Login](signedData).left.map { errors =>
-        errors flatMap { case (path, validationErrors) => validationErrors }
-      }
+      Protocol.decode[Login](signedData)
     }
     else {
-      Left(Seq(new ValidationError("invalid signature")))
+      new Failure(InvalidSignature("invalid signature"))
     }
   }
 
   def checkValidLogin(userId: String, sessionId: String, expiresAt: Date
-  ): Either[String, Boolean] = {
+  ): Try[Boolean] = {
     val resp = rawCall("realm.check_valid_login", new JsObject(Seq(
       "user_id" -> toJson(userId),
       "session_id" -> toJson(sessionId),
       "expires_at" -> toJson(Protocol.encodeTime(expiresAt))
     )))
     for {
-      r   <- resp.right
-      ret <- (r \ "return").asOpt[String].toRight("response has no field 'return'").right
+      r   <- resp
+      ret <- asTry((r \ "return").validate[String])
     }
     yield ret == "true"
   }
@@ -63,32 +62,22 @@ class Realm(
    */
   def questionChallenge[A,B](
     question: A, userId: String
-  )(implicit w: Writes[A], r: Reads[B]): Either[String, B] = {
+  )(implicit w: Writes[A], r: Reads[B]): Try[B] = {
     val params = new JsObject(Seq("question" -> toJson(question)))
     for {
-      json <- rawCall("realm.question_challenge", params).right
-      result <- json.asOpt.toRight("error parsing response").right
+      json <- rawCall("realm.question_challenge", params)
+      result <- asTry(json.validate[B])
     } yield result
   }
 
-  def userGet(userId: String): Either[Seq[ValidationError], ToznyUser] = {
+  def userGet(userId: String): Try[ToznyUser] = {
     val resp = rawCall("realm.user_get", new JsObject(Seq(
       "user_id" -> toJson(userId)
     )))
     for {
-      r    <- resp.left.map(err).right
-      user <- ToznyUser.ToznyUserFormat.reads(r \ "results").asEither.left.map(flatErrors).right
+      r    <- resp
+      user <- asTry((r \ "results").validate[ToznyUser])
     } yield user
-
-      /* Left(Seq(new ValidationError("invalid signature"))) */
-  }
-
-  private def err(e: String): Seq[ValidationError] = {
-    Seq(ValidationError(e))
-  }
-
-  private def flatErrors(es: Seq[(JsPath, Seq[ValidationError])]): Seq[ValidationError] = {
-    es flatMap { case (p, vs) => vs }
   }
 
 }
