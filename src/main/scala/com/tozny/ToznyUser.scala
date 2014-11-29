@@ -1,8 +1,11 @@
 package com.tozny
 
 import java.util.Date
-import play.api.libs.json._
-import play.api.libs.json.Json.toJson
+
+import play.api.libs.json._ // JSON library
+import play.api.libs.json.Reads._ // Custom validation helpers
+import play.api.libs.json.Writes._
+import play.api.libs.functional.syntax._ // Combinator syntax
 
 case class ToznyUser(
   userId:            String,
@@ -20,82 +23,33 @@ case class ToznyUser(
 )
 
 object ToznyUser {
+  import Login.formatDate
 
   type ToznyMeta = Map[String, String]
 
-  implicit object ToznyUserFormat extends Format[ToznyUser] {
-
-    def reads(json: JsValue): JsResult[ToznyUser] = {
-      for {
-        userId  <- (json \ "user_id")         .validate[String]
-        status  <- (json \ "status")          .validate[String]
-        created <- parseDate(json \ "created")
-        meta    <- (json \ "meta")            .validate[ToznyMeta]
-      } yield {
-        val lastLogin         = parseDate(json \ "last_login").asOpt
-        val lastFailedLogin   = parseDate(json \ "last_failed_login").asOpt
-        val modified          = parseDate(json \ "modified").asOpt.getOrElse(created)
-        val blocked           = parseInt(json \ "blocked")
-        val loginAttempts     = parseInt(json \ "login_attempts")
-        val totalLogins       = parseInt(json \ "total_logins")
-        val totalFailedLogins = parseInt(json \ "total_failed_logins")
-        val totalDevices      = parseInt(json \ "total_devices")
-        ToznyUser(
-          userId,
-          blocked,
-          loginAttempts,
-          status,
-          created,
-          modified,
-          lastLogin,
-          totalLogins,
-          totalFailedLogins,
-          lastFailedLogin,
-          totalDevices,
-          meta
-        )
-      }
+  val optDate: Format[Option[Date]] = Format.optionWithNull(formatDate)
+  val intOrZeroReads: Reads[Int] = {
+    val num = Reads.of[Int]
+    val str = Reads.of[String] map { s =>
+      try { s.toInt } catch { case e:NumberFormatException => 0 }
     }
-
-    def writes(u: ToznyUser): JsValue = {
-      val lastLogin = u.lastLogin.map(stringifyDate).getOrElse(JsNull)
-      val lastFailedLogin = u.lastFailedLogin.map(stringifyDate).getOrElse(JsNull)
-      new JsObject(Seq(
-        "user_id"             -> toJson(u.userId),
-        "blocked"             -> toJson(u.blocked),
-        "login_attempts"      -> toJson(u.loginAttempts),
-        "status"              -> toJson(u.status),
-        "created"             -> toJson(stringifyDate(u.created)),
-        "modified"            -> toJson(stringifyDate(u.modified)),
-        "last_login"          -> lastLogin,
-        "total_logins"        -> toJson(u.totalLogins),
-        "total_failed_logins" -> toJson(u.totalFailedLogins),
-        "last_failed_login"   -> lastFailedLogin,
-        "total_devices"       -> toJson(u.totalDevices),
-        "meta"                -> toJson(u.meta)
-      ))
-    }
-
+    num or str or Reads.pure(0)
   }
+  val intOrZero: Format[Int] = Format(intOrZeroReads, Writes.of[Int])
 
-  private def parseDate(date: JsValue): JsResult[Date] = {
-    val seconds = date match {
-      case JsString(str) if str.length == 10 => new JsSuccess(str.toLong)
-      case JsNumber(n) => new JsSuccess(n.longValue)
-      case default => JsError("error parsing date")
-    }
-    seconds map { (s: Long) => new Date(s * 1000) }
-  }
-
-  private def parseInt(n: JsValue): Int = n match {
-    case JsString(str) => try { str.toInt } catch { case e:NumberFormatException => 0 }
-    case JsNumber(num) => num.intValue
-    case default => 0
-  }
-
-  private def stringifyDate(date: Date): JsValue = {
-    val seconds = date.getTime() / 1000L
-    toJson("%d".format(seconds))
-  }
+  implicit val toznyUserFormat: Format[ToznyUser] = (
+    (__ \ "user_id")              .format[String]        and
+    (__ \ "blocked")              .format(intOrZero)     and
+    (__ \ "login_attempts")       .format(intOrZero)     and
+    (__ \ "status")               .format[String]        and
+    (__ \ "created")              .format(formatDate)    and
+    (__ \ "modified")             .format(formatDate)    and
+    (__ \ "last_login")           .format(optDate)       and
+    (__ \ "total_logins")         .format(intOrZero)     and
+    (__ \ "total_failed_logins")  .format(intOrZero)     and
+    (__ \ "last_failed_login")    .format(optDate)       and
+    (__ \ "total_devices")        .format(intOrZero)     and
+    (__ \ "meta")                 .format[ToznyMeta]
+  )(ToznyUser.apply _, unlift(ToznyUser.unapply))
 
 }

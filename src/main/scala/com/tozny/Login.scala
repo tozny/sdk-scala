@@ -1,8 +1,12 @@
 package com.tozny
 
 import java.util.Date
-import play.api.libs.json._
+
 import play.api.libs.json.Json.toJson
+import play.api.libs.json._ // JSON library
+import play.api.libs.json.Reads._ // Custom validation helpers
+import play.api.libs.json.Writes._
+import play.api.libs.functional.syntax._ // Combinator syntax
 
 case class Login(
   userId:        String,
@@ -15,46 +19,28 @@ case class Login(
 
 object Login {
 
-  implicit object LoginFormat extends Format[Login] {
-
-    def reads(json: JsValue): JsResult[Login] = {
-      for {
-        userId        <- (json \ "user_id")       .validate[String]
-        sessionId     <- (json \ "session_id")    .validate[String]
-        realmKeyId    <- (json \ "realm_key_id")  .validate[String]
-        userDisplay   <- (json \ "user_display")  .validate[String]
-        expiresAt     <- parseDate(json \ "expires_at")
-        signatureType <- (json \ "signature_type").validate[String]
-      } yield {
-        Login(userId, sessionId, realmKeyId, userDisplay, expiresAt, signatureType)
-      }
+  val readsDate: Reads[Date] = {
+    val str = (minLength[String](10) keepAnd minLength[String](10)).map(_.toLong)
+    val num = Reads.of[Long]
+    (str or num).map { (seconds: Long) =>
+      new Date(seconds * 1000)
     }
-
-    def writes(l: Login): JsValue = {
-      new JsObject(Seq(
-        ("user_id"        -> toJson(l.userId)),
-        ("session_id"     -> toJson(l.sessionId)),
-        ("realm_key_id"   -> toJson(l.realmKeyId)),
-        ("user_display"   -> toJson(l.userDisplay)),
-        ("expires_at"     -> stringifyDate(l.expiresAt)),
-        ("signature_type" -> toJson(l.signatureType))
-      ))
-    }
-
   }
 
-  private def parseDate(date: JsValue): JsResult[Date] = {
-    val seconds = date match {
-      case JsString(str) if str.length == 10 => new JsSuccess(str.toLong)
-      case JsNumber(n) => new JsSuccess(n.longValue)
-      case default => JsError("error parsing date")
-    }
-    seconds map { (s: Long) => new Date(s * 1000) }
-  }
-
-  private def stringifyDate(date: Date): JsValue = {
+  val writesDate: Writes[Date] = Writes { date =>
     val seconds = date.getTime() / 1000L
     toJson("%d".format(seconds))
   }
+
+  val formatDate: Format[Date] = Format(readsDate, writesDate)
+
+  implicit val loginFormat: Format[Login] = (
+    (__ \ "user_id")       .format[String]     and
+    (__ \ "session_id")    .format[String]     and
+    (__ \ "realm_key_id")  .format[String]     and
+    (__ \ "user_display")  .format[String]     and
+    (__ \ "expires_at")    .format(formatDate) and
+    (__ \ "signature_type").format[String]
+  )(Login.apply _, unlift(Login.unapply))
 
 }
