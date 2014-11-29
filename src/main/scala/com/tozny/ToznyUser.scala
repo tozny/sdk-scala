@@ -19,7 +19,6 @@ case class ToznyUser(
   meta:              ToznyUser.ToznyMeta
 )
 
-
 object ToznyUser {
 
   type ToznyMeta = Map[String, String]
@@ -27,15 +26,15 @@ object ToznyUser {
   implicit object ToznyUserFormat extends Format[ToznyUser] {
 
     def reads(json: JsValue): JsResult[ToznyUser] = {
-      val user = for {
-        userId            <- (json \ "user_id")            .asOpt[String].toRight("expected user_id").right
-        status            <- (json \ "status")             .asOpt[String].toRight("expected status").right
-        created           <- parseDate(json \ "created")   .toRight("error parsing 'created'").right
-        meta              <- (json \ "meta")               .asOpt[ToznyMeta].toRight("expected meta").right
+      for {
+        userId  <- (json \ "user_id")         .validate[String]
+        status  <- (json \ "status")          .validate[String]
+        created <- parseDate(json \ "created")
+        meta    <- (json \ "meta")            .validate[ToznyMeta]
       } yield {
-        val lastLogin         = parseDate(json \ "last_login")
-        val lastFailedLogin   = parseDate(json \ "last_failed_login")
-        val modified          = parseDate(json \ "modified").getOrElse(created)
+        val lastLogin         = parseDate(json \ "last_login").asOpt
+        val lastFailedLogin   = parseDate(json \ "last_failed_login").asOpt
+        val modified          = parseDate(json \ "modified").asOpt.getOrElse(created)
         val blocked           = parseInt(json \ "blocked")
         val loginAttempts     = parseInt(json \ "login_attempts")
         val totalLogins       = parseInt(json \ "total_logins")
@@ -55,10 +54,6 @@ object ToznyUser {
           totalDevices,
           meta
         )
-      }
-      user match {
-        case Right(u) => new JsSuccess(u)
-        case Left(e)  => JsError(e)
       }
     }
 
@@ -83,11 +78,11 @@ object ToznyUser {
 
   }
 
-  private def parseDate(date: JsValue): Option[Date] = {
+  private def parseDate(date: JsValue): JsResult[Date] = {
     val seconds = date match {
-      case JsString(str) if str.length == 10 => Some(str.toLong)
-      case JsNumber(n) => Some(n.longValue)
-      case default => None
+      case JsString(str) if str.length == 10 => new JsSuccess(str.toLong)
+      case JsNumber(n) => new JsSuccess(n.longValue)
+      case default => JsError("error parsing date")
     }
     seconds map { (s: Long) => new Date(s * 1000) }
   }

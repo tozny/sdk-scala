@@ -18,19 +18,15 @@ object Login {
   implicit object LoginFormat extends Format[Login] {
 
     def reads(json: JsValue): JsResult[Login] = {
-      val attempt = for {
-        userId        <- (json \ "user_id")       .asOpt[String].toRight("expected user_id").right
-        sessionId     <- (json \ "session_id")    .asOpt[String].toRight("expected session_id").right
-        realmKeyId    <- (json \ "realm_key_id")  .asOpt[String].toRight("expected realm_key_id").right
-        userDisplay   <- (json \ "user_display")  .asOpt[String].toRight("expected user_display").right
-        expiresAt     <- parseDate(json \ "expires_at").toRight("expected expires_at").right
-        signatureType <- (json \ "signature_type").asOpt[String].toRight("expected signature_type").right
+      for {
+        userId        <- (json \ "user_id")       .validate[String]
+        sessionId     <- (json \ "session_id")    .validate[String]
+        realmKeyId    <- (json \ "realm_key_id")  .validate[String]
+        userDisplay   <- (json \ "user_display")  .validate[String]
+        expiresAt     <- parseDate(json \ "expires_at")
+        signatureType <- (json \ "signature_type").validate[String]
       } yield {
         Login(userId, sessionId, realmKeyId, userDisplay, expiresAt, signatureType)
-      }
-      attempt match {
-        case Right(login) => new JsSuccess(login)
-        case Left(e)      => JsError(e)
       }
     }
 
@@ -47,11 +43,11 @@ object Login {
 
   }
 
-  private def parseDate(date: JsValue): Option[Date] = {
+  private def parseDate(date: JsValue): JsResult[Date] = {
     val seconds = date match {
-      case JsString(str) if str.length == 10 => Some(str.toLong)
-      case JsNumber(n) => Some(n.longValue)
-      case default => None
+      case JsString(str) if str.length == 10 => new JsSuccess(str.toLong)
+      case JsNumber(n) => new JsSuccess(n.longValue)
+      case default => JsError("error parsing date")
     }
     seconds map { (s: Long) => new Date(s * 1000) }
   }
