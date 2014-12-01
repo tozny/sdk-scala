@@ -8,9 +8,11 @@ import java.util.Date
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 
-import org.apache.commons.codec.binary.Base64
-import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.binary.Base64.{
+  decodeBase64, encodeBase64URLSafeString
+}
 import org.apache.commons.codec.binary.Hex
+import org.apache.http.client.HttpResponseException
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.{HttpResponse, NameValuePair}
@@ -18,8 +20,10 @@ import org.apache.http.message.BasicNameValuePair
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.util.EntityUtils
 
-import play.api.libs.json.{Json, JsObject, JsValue, Reads, Writes}
-import play.api.libs.json.Json.{toJson}
+import play.api.libs.json.{Json, JsObject, JsValue, JsResult, JsError, JsSuccess, JsResultException, Reads, Writes}
+import play.api.libs.json.Json.{fromJson, toJson}
+
+import scala.util.{Failure, Success, Try}
 
 object Protocol {
   private val utf8 = Charset.forName("UTF-8")
@@ -30,7 +34,7 @@ object Protocol {
     val mac = Mac.getInstance("HmacSHA256")
     mac.init(secretKey)
     val result: Array[Byte] = mac.doFinal(message.getBytes(utf8))
-    Base64.encodeBase64URLSafeString(result)
+    encodeBase64URLSafeString(result)
   }
 
   def checkSignature(secret: String, signature: String, message: String): Boolean = {
@@ -41,14 +45,15 @@ object Protocol {
   def sendRequest(
     apiUrl: String, realmKeyId: String, secret: String, method: String,
     params: JsObject
-  ): Either[String, JsValue] = {
+  ): Try[JsValue] = {
     val payload = mkRequest(realmKeyId, secret, method, params)
     val resp = rawCall(apiUrl, payload)
     if (resp.getStatusLine.getStatusCode >= 300) {
-      Left(resp.getStatusLine.getReasonPhrase)
+      val sl = resp.getStatusLine
+      new Failure(new HttpResponseException(sl.getStatusCode, sl.getReasonPhrase))
     }
     else {
-      Right(Json.parse(EntityUtils.toString(resp.getEntity)))
+      Try(Json.parse(EntityUtils.toString(resp.getEntity)))
     }
   }
 
@@ -76,7 +81,7 @@ object Protocol {
     ))
     val payload = params ++ meta
     val json = Json.stringify(payload)
-    val encoded = Base64.encodeBase64URLSafeString(json.getBytes(utf8))
+    val encoded = encodeBase64URLSafeString(json.getBytes(utf8))
     val signature = sign(secret, encoded)
     return List(
       new BasicNameValuePair("signed_data", encoded),
@@ -84,14 +89,20 @@ object Protocol {
     )
   }
 
-  def decode[A](payload: String)(implicit r: Reads[A]): Option[A] = {
-    val decoded = new Base64(true).decode(payload)
-    Json.parse(new String(decoded, utf8)).asOpt
+  def decode[A](payload: String)(implicit r: Reads[A]): Try[A] = {
+    val decoded = decodeBase64(payload)
+    val parsed  = Json.parse(new String(decoded, utf8))
+    asTry(fromJson(parsed))
   }
 
   def encodeTime(date: Date): String = {
     val inSeconds = Math.floor(date.getTime() / 1000)
     return inSeconds.toString
+  }
+
+  def asTry[A](r: JsResult[A]): Try[A] = r match {
+    case JsError(e) => new Failure(JsResultException(e))
+    case JsSuccess(v, _) => new Success(v)
   }
 
   private def getExpires(): String = {
@@ -110,3 +121,5 @@ object Protocol {
     bytes
   }
 }
+
+case class InvalidSignature(msg: String) extends RuntimeException

@@ -1,0 +1,15 @@
+@(title: String, displayname: String, userdata: String)
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>@title</title>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+    </head>
+    <body>
+	<p>You are logged in as @displayname.</p>
+	<code><pre>@userdata</pre></code>
+	<p><a href="@routes.Tozny.logout">log out</a>
+    </body>
+</html>

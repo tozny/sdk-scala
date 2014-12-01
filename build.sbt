@@ -14,4 +14,15 @@ lazy val root = (project in file(".")).
       )
     )
 
+lazy val demo = (project in file("tozny-demo")).
+  settings(
+    name         := "tozny-demo",
+    version      := "1.0",
+    scalaVersion := "2.11.4"
+  ).
+  aggregate(root).
+  dependsOn(root).
+  enablePlugins(PlayScala)
+
+
 net.virtualvoid.sbt.graph.Plugin.graphSettings
