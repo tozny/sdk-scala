@@ -11,7 +11,7 @@ object Application extends Controller {
         "Tozny Title", 
         "This is a Tozny example site", 
         Play.current.configuration.getString("tozny.realmKeyId").get,
-        Play.current.configuration.getString("tozny.apiUrl").get
+        Play.current.configuration.getString("tozny.apiUrl").getOrElse("https://api.tozny.com")
       )
     )
   }

@@ -5,15 +5,15 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.data._
 import play.api.data.Forms._
-import com.tozny.{Login, Realm, ToznyUser}
+import com.tozny.Realm
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object Tozny extends Controller with AppSecurity {
   val realm = new Realm(
     Play.current.configuration.getString("tozny.realmKeyId").get,
     Play.current.configuration.getString("tozny.realmKeySecret").get,
-    Play.current.configuration.getString("tozny.apiUrl").get
+    Play.current.configuration.getString("tozny.apiUrl").getOrElse("https://api.tozny.com")
   )
 
   def verify = LoginAction { implicit request =>
